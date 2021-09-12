@@ -1,6 +1,12 @@
 import types
+from copy import copy
+from itertools import combinations
 from typing import Callable, Optional
 from variants import *
+
+
+FULL_TRAIN_DATA = [list(map(int, bin(i)[2:].zfill(4))) for i in range(2 ** 4)]
+FULL_EXPECTED_OUTPUT_DATA = set_expected_output_data(FULL_TRAIN_DATA)
 
 
 def hamming_distance(a: List[int], b: List[int]) -> int:
@@ -21,6 +27,8 @@ class NeuralNetwork:
         self.weights: List[float] = [1.0, 1.0, 1.0, 1.0, 1.0]
         self.current_error_count: Optional[int] = None
         self.current_nn_output: Optional[List[int]] = None
+        self.current_partial_error_count: Optional[int] = None
+        self.current_partial_nn_output: Optional[List[int]] = None
         self._net = None
 
         # параметр learning_rate должен иметь значение от 0 не включительно до 1 включительно
@@ -53,48 +61,71 @@ class NeuralNetwork:
                                    for j in range(len(input_train_data)))
 
     def epoch(self,
-              input_data: List[List[int]],
-              expected_output_data: List[int]) -> int:
+              input_data: List[List[int]]) -> int:
         """
         :return: Возвращает количество ошибок на данном этапе
         """
         self.current_nn_output = self._get_output_data(input_data)
-        self.current_error_count = hamming_distance(self.current_nn_output, expected_output_data)
+        self.current_error_count = hamming_distance(self.current_nn_output, FULL_EXPECTED_OUTPUT_DATA)
         if not self.current_error_count:
             return self.current_error_count
-        errors = [expected_output_data[i] - self.current_nn_output[i] for i in range(len(self.current_nn_output))]
+        errors = [FULL_EXPECTED_OUTPUT_DATA[i] - self.current_nn_output[i] for i in range(len(self.current_nn_output))]
         self.change_weights([[1] + x for x in input_data], errors)
         return self.current_error_count
 
+    def partial_epoch(self,
+                      partial_input_data: List[List[int]],
+                      partial_expected_output_data: List[int]):
+        self.current_partial_nn_output = self._get_output_data(partial_input_data)
+        self.current_partial_error_count = hamming_distance(self.current_partial_nn_output,
+                                                            partial_expected_output_data)
+        self.current_nn_output = self._get_output_data(FULL_TRAIN_DATA)
+        self.current_error_count = hamming_distance(self.current_nn_output, FULL_EXPECTED_OUTPUT_DATA)
+        if not self.current_error_count:
+            return self.current_error_count
+        errors = [partial_expected_output_data[i] - self.current_partial_nn_output[i]
+                  for i in range(len(self.current_partial_nn_output))]
+        self.change_weights([[1] + x for x in partial_input_data], errors)
+        return self.current_error_count
 
-if __name__ == '__main__':
-    nn = NeuralNetwork(learning_rate=0.1, activation_function=first_af, derivative_function=first_df)
-    input_data = FULL_TRAIN_DATA
-    expected_output_data = set_expected_output_data()
+    def reset(self):
+        """
+        Ресетает веса на начало
+        """
+        self.weights = [1.0, 1.0, 1.0, 1.0, 1.0]
 
+
+def check_combination(nn: NeuralNetwork, partial_input_data: List[List[int]]) -> (int, bool):
+    """
+    Проверяет входящую неполную выборку для обучения.
+    Возвращает количество эпох для обучения + True, если обучение успешно, False в противном случае
+    """
+    partial_expected_output_data = set_expected_output_data(partial_input_data)
     epoch_number = 0
     count_errors = 1
     while count_errors:
         epoch_number += 1
-        print(f'Current state: w1 = {nn.weights[1]:.4} w2 = {nn.weights[2]:.4} w3 = {nn.weights[3]:.4} '
-              f'w4 = {nn.weights[4]:.4} w0 = {nn.weights[0]:.4}')
-        count_errors = nn.epoch(input_data, expected_output_data)
-        print(f'k = {epoch_number}')
-        print(f'E = {nn.current_error_count}')
-        print(f'Y = {nn.current_nn_output}', end='\n\n')
+        count_errors = nn.partial_epoch(partial_input_data, partial_expected_output_data)
+        if nn.current_partial_error_count == 0 and nn.current_error_count != 0:
+            return epoch_number, False
+    return epoch_number, True
 
-    nn = NeuralNetwork(learning_rate=0.45, activation_function=third_af, derivative_function=third_df)
-    input_data = FULL_TRAIN_DATA
-    expected_output_data = set_expected_output_data()
 
-    epoch_number = 0
-    count_errors = 1
-    while count_errors:
-        epoch_number += 1
-        print(f'Current state: w1 = {nn.weights[1]:.4} w2 = {nn.weights[2]:.4} w3 = {nn.weights[3]:.4} '
-              f'w4 = {nn.weights[4]:.4} w0 = {nn.weights[0]:.4}')
-        count_errors = nn.epoch(input_data, expected_output_data)
-        print(f'k = {epoch_number}')
-        print(f'E = {nn.current_error_count}')
-        print(f'Y = {nn.current_nn_output}', end='\n\n')
+def get_min_sample(nn: NeuralNetwork):
+    result_sample = copy(FULL_TRAIN_DATA)
+    epochs = 100  # просто так
 
+    for i in range(1, len(FULL_TRAIN_DATA)):
+        is_found = False
+        for comb in combinations(FULL_TRAIN_DATA, len(FULL_TRAIN_DATA) - i):
+            tested_sample = list(comb)
+            nn.reset()
+            tmp_epochs, result = check_combination(nn, comb)
+            if result and (len(result_sample) > len(tested_sample)
+                           or len(result_sample) == len(tested_sample) and tmp_epochs < epochs):
+                result_sample = list(comb)
+                is_found = True
+                break
+        if not is_found:
+            break
+    return result_sample

@@ -6,12 +6,9 @@ if TYPE_CHECKING:
     from services import NeuralNetwork
 
 
-FULL_TRAIN_DATA = [list(map(int, bin(i)[2:].zfill(4))) for i in range(2 ** 4)]
-
-
-def set_expected_output_data() -> List[int]:
+def set_expected_output_data(input_data: List[List[int]]) -> List[int]:
     data = []
-    for combination in FULL_TRAIN_DATA:
+    for combination in input_data:
         # 8 Вариант
         data.append((combination[0] | combination[1] | combination[2]) & combination[3])
     return data
