@@ -29,7 +29,6 @@ class NeuralNetwork:
         self.current_nn_output: Optional[List[int]] = None
         self.current_partial_error_count: Optional[int] = None
         self.current_partial_nn_output: Optional[List[int]] = None
-        self._net = None
 
         # параметр learning_rate должен иметь значение от 0 не включительно до 1 включительно
         if not 0.0 < learning_rate <= 1.0:
@@ -39,7 +38,7 @@ class NeuralNetwork:
         self.derivative_function = types.MethodType(derivative_function, self)
         self.error_function = types.MethodType(error_function, self)
 
-    def get_net(self, x1: int, x2: int, x3: int, x4: int, *args):
+    def get_net(self, x1: int, x2: int, x3: int, x4: int, *args) -> float:
         return x1 * self.weights[1] + \
                x2 * self.weights[2] + \
                x3 * self.weights[3] + \
@@ -75,7 +74,7 @@ class NeuralNetwork:
 
     def partial_epoch(self,
                       partial_input_data: List[List[int]],
-                      partial_expected_output_data: List[int]):
+                      partial_expected_output_data: List[int]) -> int:
         self.current_partial_nn_output = self._get_output_data(partial_input_data)
         self.current_partial_error_count = hamming_distance(self.current_partial_nn_output,
                                                             partial_expected_output_data)
@@ -111,9 +110,9 @@ def check_combination(nn: NeuralNetwork, partial_input_data: List[List[int]]) ->
     return epoch_number, True
 
 
-def get_min_sample(nn: NeuralNetwork):
+def get_min_sample(nn: NeuralNetwork) -> List[int]:
     result_sample = copy(FULL_TRAIN_DATA)
-    epochs = 100  # просто так
+    epochs = 100
 
     for i in range(1, len(FULL_TRAIN_DATA)):
         is_found = False
