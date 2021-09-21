@@ -14,7 +14,7 @@ class Point:
     y: float
 
 
-def mnk(data: List[Iterable[int, int]]) -> (int, int):
+def mnk(data: List[Iterable[List[float]]]) -> (float, float):
     """
     Возвращает значения c, d, расчитанные по методу наименьших квадратов
     Принимает в себя список точек
@@ -27,12 +27,12 @@ def mnk(data: List[Iterable[int, int]]) -> (int, int):
     return c, d
 
 
-def af(self: "NeuralNetwork", x: float):
+def af(self: "NeuralNetwork", x: float) -> float:
     return self.weights[0] * x + self.weights[1]
 
 
-def df(self: "NeuralNetwork", net: int):
-    return 1
+def df(self: "NeuralNetwork", net: float) -> float:
+    return 1.0
 
 
 def just_x(self: "NeuralNetwork", x: int) -> float:

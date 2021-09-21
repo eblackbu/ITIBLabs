@@ -1,8 +1,10 @@
 import types
-from copy import copy
 from itertools import combinations
 from typing import Callable, Optional
 from variants import *
+import pandas as pd
+from copy import copy
+import matplotlib.pyplot as plt
 
 
 FULL_TRAIN_DATA = [list(map(int, bin(i)[2:].zfill(4))) for i in range(2 ** 4)]

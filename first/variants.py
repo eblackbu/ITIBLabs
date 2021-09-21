@@ -10,7 +10,7 @@ def set_expected_output_data(input_data: List[List[int]]) -> List[int]:
     data = []
     for combination in input_data:
         # 8 Вариант
-        data.append((combination[0] | combination[1] | combination[2]) & combination[3])
+        data.append((combination[0] | combination[1] | combination[3]) & combination[2])
     return data
 
 
