@@ -2,7 +2,6 @@ import types
 from itertools import combinations
 from typing import Callable, Optional
 from variants import *
-import pandas as pd
 from copy import copy
 import matplotlib.pyplot as plt
 
@@ -19,7 +18,7 @@ class NeuralNetwork:
 
     def __init__(self,
                  learning_rate: float,
-                 activation_function: Callable[["NeuralNetwork", int], int],
+                 activation_function: Callable[["NeuralNetwork", float], int],
                  derivative_function: Callable[["NeuralNetwork", int], int],
                  error_function: Callable[["NeuralNetwork", int], float] = just_x):
         """

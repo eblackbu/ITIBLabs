@@ -1,11 +1,10 @@
 import math
-import random
 from dataclasses import dataclass
 from typing import List, Iterable, TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    from services import NeuralNetwork
+    from second.services import NeuralNetwork
 
 
 @dataclass
@@ -28,7 +27,7 @@ def mnk(data: List[Iterable[List[float]]]) -> (float, float):
 
 
 def af(self: "NeuralNetwork", x: float) -> float:
-    return self.weights[0] * x + self.weights[1]
+    return x
 
 
 def df(self: "NeuralNetwork", net: float) -> float:
