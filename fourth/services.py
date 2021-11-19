@@ -18,13 +18,14 @@ class NeuralNetwork:
                  learning_rate: float,
                  activation_function: Callable[["NeuralNetwork", int], int],
                  derivative_function: Callable[["NeuralNetwork", int], int],
+                 rbf: List[List[int]],
                  error_function: Callable[["NeuralNetwork", int], float] = just_x):
         """
         Инициализируем веса
         Переданная функция активации должна первым параметром принимать параметр self, чтобы превратить ее в метод.
         """
-        self.weights: List[float] = [0.0, 0.0, 0.0, 0.0]
-        self.rbf: List[List[int]] = [[0, 0, 1, 1], [0, 1, 1, 1], [1, 0, 1, 1]]
+        self.weights: List[float] = [1.0 for _ in range(len(rbf))]
+        self.rbf: List[List[int]] = rbf
         self.current_error_count: Optional[int] = None
         self.current_nn_output: Optional[List[int]] = None
         self.current_partial_error_count: Optional[int] = None
@@ -38,29 +39,27 @@ class NeuralNetwork:
         self.derivative_function = types.MethodType(derivative_function, self)
         self.error_function = types.MethodType(error_function, self)
 
-    def get_fi(self, input_data: List[int]) -> List[float]:
-        return [math.exp(-sum([math.pow(input_data[i] - self.rbf[j][i], 2) for i in range(len(input_data))]))
-                for j in range(len(self.rbf))]
+    def get_fi(self, input_data: List[int], j: int) -> float:
+        try:
+            return math.exp(-sum([math.pow(input_data[i] - self.rbf[j][i], 2) for i in range(len(input_data))]))
+        except IndexError:
+            return 1.0
 
-    def get_net(self, x1: int, x2: int, x3: int, *args) -> float:
-        fi_1, fi_2, fi_3 = self.get_fi([x1, x2, x3])
-        return fi_1 * self.weights[1] + \
-               fi_2 * self.weights[2] + \
-               fi_3 * self.weights[3] + \
-               1 * self.weights[0]
+    def get_net(self, combination: List[int]) -> float:
+        return sum((self.get_fi(combination, i) * self.weights[i] for i in range(len(self.rbf))))
 
     def _get_output_data(self,
                          input_data: List[List[int]]) -> List[int]:
-        return [self.activation_function(self.get_net(*combination)) for combination in input_data]
+        return [self.activation_function(self.get_net(combination)) for combination in input_data]
 
     def change_weights(self,
                        input_train_data: List[List[int]],
                        errors: List[int]) -> None:
         for i, _ in enumerate(self.weights):
-            self.weights[i] += sum(self.learning_rate *
-                                   self.error_function(errors[j]) *
-                                   self.get_fi(input_train_data[j])
-                                   for j in range(len(input_train_data)))
+            self.weights[i] += sum([self.learning_rate *
+                                    self.error_function(errors[j]) *
+                                    self.get_fi(input_train_data[j], i)
+                                    for j in range(len(input_train_data))])
 
     def epoch(self,
               input_data: List[List[int]]) -> int:
@@ -72,7 +71,7 @@ class NeuralNetwork:
         if not self.current_error_count:
             return self.current_error_count
         errors = [FULL_EXPECTED_OUTPUT_DATA[i] - self.current_nn_output[i] for i in range(len(self.current_nn_output))]
-        self.change_weights([[1] + x for x in input_data], errors)
+        self.change_weights(input_data, errors)
         return self.current_error_count
 
     def partial_epoch(self,
@@ -87,14 +86,14 @@ class NeuralNetwork:
             return self.current_error_count
         errors = [partial_expected_output_data[i] - self.current_partial_nn_output[i]
                   for i in range(len(self.current_partial_nn_output))]
-        self.change_weights([[1] + x for x in partial_input_data], errors)
+        self.change_weights(partial_input_data, errors)
         return self.current_error_count
 
     def reset(self):
         """
         Ресетает веса на начало
         """
-        self.weights = [0.0, 0.0, 0.0, 0.0]
+        self.weights = [1.0 for _ in range(len(self.rbf))]
 
 
 def check_combination(nn: NeuralNetwork, partial_input_data: List[List[int]]) -> (int, bool):
@@ -131,3 +130,33 @@ def get_min_sample(nn: NeuralNetwork) -> List[int]:
         if not is_found:
             break
     return result_sample
+
+
+if __name__ == "__main__":
+    data = []
+    epoch_number = 0
+    count_errors = 1
+    errors = []
+    epochs = []
+    rbf = min(
+        [comb for comb in FULL_TRAIN_DATA if f(comb) == 0],
+        [comb for comb in FULL_TRAIN_DATA if f(comb) == 1],
+        key=len
+    )
+    nn = NeuralNetwork(learning_rate=0.05, activation_function=first_af, derivative_function=first_df, rbf=rbf)
+
+    while count_errors and epoch_number < 10000:
+        epoch_number += 1
+        current_weights = copy(nn.weights)
+        count_errors = nn.epoch(FULL_TRAIN_DATA)
+
+        data.append([epoch_number,
+                     nn.rbf,
+                     f'({", ".join(map(str, current_weights))})',
+                     f'({", ".join(map(str, nn.current_nn_output))})',
+                     nn.current_error_count])
+        epochs.append(epoch_number)
+        errors.append(count_errors)
+
+    for i in data:
+        print(i[2:])
